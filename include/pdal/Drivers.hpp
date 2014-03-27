@@ -41,6 +41,7 @@
 #include <pdal/drivers/faux/Writer.hpp>
 
 #include <pdal/drivers/las/Reader.hpp>
+#include <pdal/drivers/las2/Reader.hpp>
 #include <pdal/drivers/las/Writer.hpp>
 
 #include <pdal/drivers/pipeline/Reader.hpp>

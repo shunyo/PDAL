@@ -62,6 +62,7 @@ namespace pdal
 //
 MAKE_READER_CREATOR(FauxReader, pdal::drivers::faux::Reader)
 MAKE_READER_CREATOR(LasReader, pdal::drivers::las::Reader)
+MAKE_READER_CREATOR(Las2Reader, pdal::drivers::las2::Reader)
 #ifdef PDAL_HAVE_ORACLE
 #ifndef USE_PDAL_PLUGIN_OCI
 MAKE_READER_CREATOR(OciReader, pdal::drivers::oci::Reader)

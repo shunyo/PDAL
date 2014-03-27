@@ -197,6 +197,24 @@ set (PDAL_DRIVERS_LAS_CPP
 list (APPEND PDAL_CPP ${PDAL_DRIVERS_LAS_CPP} )
 list (APPEND PDAL_HPP ${PDAL_DRIVERS_LAS_HPP} )
 
+
+#
+# drivers/las
+#
+set(PDAL_LAS2_PATH drivers/las2)
+set(PDAL_LAS2_HEADERS "${PDAL_HEADERS_DIR}/${PDAL_LAS2_PATH}")
+set(PDAL_LAS2_SRC "${PROJECT_SOURCE_DIR}/src/${PDAL_LAS2_PATH}")
+set (PDAL_DRIVERS_LAS2_HPP
+  "${PDAL_LAS2_HEADERS}/Reader.hpp"
+  "${PDAL_LAS2_HEADERS}/las.hpp"
+)
+
+
+set (PDAL_DRIVERS_LAS2_CPP
+  "${PDAL_LAS2_SRC}/Reader.cpp"
+)
+list (APPEND PDAL_CPP ${PDAL_DRIVERS_LAS2_CPP} )
+list (APPEND PDAL_HPP ${PDAL_DRIVERS_LAS2_HPP} )
 #
 # drivers/mrsid
 #
@@ -608,6 +626,7 @@ source_group("Header Files\\drivers\\buffer" FILES ${PDAL_DRIVERS_BUFFER_HPP})
 source_group("Header Files\\drivers\\faux" FILES ${PDAL_DRIVERS_FAUX_HPP})
 source_group("Header Files\\drivers\\caris" FILES ${PDAL_DRIVERS_CARIS_HPP})
 source_group("Header Files\\drivers\\las" FILES ${PDAL_DRIVERS_LAS_HPP})
+source_group("Header Files\\drivers\\las2" FILES ${PDAL_DRIVERS_LAS2_HPP})
 source_group("Header Files\\drivers\\nitf" FILES ${PDAL_DRIVERS_NITF_HPP})
 source_group("Header Files\\drivers\\oci" FILES ${PDAL_DRIVERS_OCI_HPP})
 source_group("Header Files\\drivers\\pipeline" FILES ${PDAL_DRIVERS_PIPELINE_HPP})
