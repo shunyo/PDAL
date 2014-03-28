@@ -362,6 +362,7 @@ void StageFactory::registerKnownReaders()
 {
     REGISTER_READER(FauxReader, pdal::drivers::faux::Reader);
     REGISTER_READER(LasReader, pdal::drivers::las::Reader);
+    REGISTER_READER(Las2Reader, pdal::drivers::las2::Reader);
 #ifdef PDAL_HAVE_ORACLE
 #ifndef USE_PDAL_PLUGIN_OCI
     REGISTER_READER(OciReader, pdal::drivers::oci::Reader);

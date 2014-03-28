@@ -37,7 +37,7 @@
 
 #include <pdal/Reader.hpp>
 #include <pdal/ReaderIterator.hpp>
-
+#include <pdal/Stage.hpp>
 #include <pdal/StreamFactory.hpp>
 
 #include <pdal/drivers/las2/las.hpp>
@@ -69,14 +69,12 @@ public:
 
     Reader(const Options&);
     Reader(const std::string&);
-    Reader(StreamFactory* factory);
     ~Reader();
 
     virtual void initialize();
     static Options getDefaultOptions();
     static std::vector<Dimension> getDefaultDimensions();
-    
-    StreamFactory& getStreamFactory() const;
+
 
     pdal::StageSequentialIterator*
         createSequentialIterator(PointBuffer& buffer) const;
@@ -90,10 +88,8 @@ public:
 
 
 protected:
-
+    ::las::las_file las_;
 private:
-    StreamFactory* m_streamFactory;
-    bool m_ownsStreamFactory;
 
     void readMetadata();
 
@@ -111,13 +107,15 @@ public:
     Base(pdal::drivers::las2::Reader const& reader);
     ~Base();
     void read(PointBuffer&);
+    bool open();
+    
 
 private:
     void initialize();
 
 protected:
     const pdal::drivers::las2::Reader& m_reader;
-    std::istream& m_istream;
+    ::las::las_file las_;
 
     inline pdal::drivers::las2::Reader const& getReader()
     {

@@ -71,32 +71,18 @@ namespace las2
 
 Reader::Reader(const Options& options)
     : pdal::Reader(options)
-    , m_streamFactory(new FilenameStreamFactory(
-        options.getValueOrThrow<std::string>("filename")))
-    , m_ownsStreamFactory(true)
 {}
 
 
 Reader::Reader(const std::string& filename)
     : pdal::Reader(Options::none())
-    , m_streamFactory(new FilenameStreamFactory(filename))
-    , m_ownsStreamFactory(true)
 {}
 
 
-Reader::Reader(StreamFactory* factory)
-    : pdal::Reader(Options::none())
-    , m_streamFactory(factory)
-    , m_ownsStreamFactory(false)
-{}
 
 
 Reader::~Reader()
 {
-    if (m_ownsStreamFactory)
-    {
-        delete m_streamFactory;
-    }
 }
 
 
@@ -104,7 +90,16 @@ void Reader::initialize()
 {
     pdal::Reader::initialize();
 
-    std::istream& stream = m_streamFactory->allocate();
+    las_.open(getOptions().getValueOrThrow<std::string>("filename"));
+    this->setNumPoints( las_.header.number_of_point_records);
+    pdal::Bounds<double> bounds(las_.header.mins[0],
+                                las_.header.mins[1],
+                                las_.header.mins[2],
+                                las_.header.maxs[0],
+                                las_.header.maxs[1],
+                                las_.header.maxs[2]);
+    this->setBounds(bounds);
+    las_.close();
     // 
     // LasHeaderReader lasHeaderReader(m_lasHeader, stream);
     // lasHeaderReader.read(*this, getSchemaRef());
@@ -122,7 +117,6 @@ void Reader::initialize()
     //     setSpatialReference(new_srs);
     // }
     readMetadata();
-    m_streamFactory->deallocate(stream);
 }
 
 
@@ -134,10 +128,6 @@ Options Reader::getDefaultOptions()
 }
 
 
-StreamFactory& Reader::getStreamFactory() const
-{
-    return *m_streamFactory;
-}
 
 
 
@@ -583,44 +573,40 @@ void Reader::readMetadata()
 
 std::vector<Dimension> Reader::getDefaultDimensions()
 {
+
+#   define DIMENSION_BOOKKEEPING(name, uid) \
+    name.setUUID(uid); \
+    name.setNamespace(s_getName()); \
+    output.push_back(name);
+    
     std::vector<Dimension> output;
     Dimension x("X", dimension::SignedInteger, 4, "X coordinate as a long "
         "integer. You must use the scale and offset information of the "
         "header to determine the double value.");
-    x.setUUID("2ee118d1-119e-4906-99c3-42934203f872");
-    x.setNamespace(s_getName());
-    output.push_back(x);
+    DIMENSION_BOOKKEEPING(x, "2ee118d1-119e-4906-99c3-42934203f872")
 
     Dimension y("Y", dimension::SignedInteger, 4, "Y coordinate as a long "
         "integer. You must use the scale and offset information of the "
         "header to determine the double value.");
-    y.setUUID("87707eee-2f30-4979-9987-8ef747e30275");
-    y.setNamespace(s_getName());
-    output.push_back(y);
+    DIMENSION_BOOKKEEPING(y, "87707eee-2f30-4979-9987-8ef747e30275")
 
     Dimension z("Z", dimension::SignedInteger, 4, "Z coordinate as a long "
         "integer. You must use the scale and offset information of the "
         "header to determine the double value.");
-    z.setUUID("e74b5e41-95e6-4cf2-86ad-e3f5a996da5d");
-    z.setNamespace(s_getName());
-    output.push_back(z);
+    DIMENSION_BOOKKEEPING(z, "e74b5e41-95e6-4cf2-86ad-e3f5a996da5d")
 
     Dimension time("Time", dimension::Float, 8, "The GPS Time is the double "
         "floating point time tag value at which the point was acquired. It "
         "is GPS Week Time if the Global Encoding low bit is clear and Adjusted "
         "Standard GPS Time if the Global Encoding low bit is set (see Global "
         "Encoding in the Public Header Block description).");
-    time.setUUID("aec43586-2711-4e59-9df0-65aca78a4ffc");
-    time.setNamespace(s_getName());
-    output.push_back(time);
+    DIMENSION_BOOKKEEPING(time, "aec43586-2711-4e59-9df0-65aca78a4ffc")
 
     Dimension intensity("Intensity", dimension::UnsignedInteger, 2,
         "The intensity value is the integer representation of the pulse "
         "return magnitude. This value is optional and system specific. "
         "However, it should always be included if available.");
-    intensity.setUUID("61e90c9a-42fc-46c7-acd3-20d67bd5626f");
-    intensity.setNamespace(s_getName());
-    output.push_back(intensity);
+    DIMENSION_BOOKKEEPING(intensity, "61e90c9a-42fc-46c7-acd3-20d67bd5626f")
 
     Dimension return_number("ReturnNumber", dimension::UnsignedInteger, 1,
         "Return Number: The Return Number is the pulse return number for "
@@ -628,18 +614,14 @@ std::vector<Dimension> Reader::getDefaultDimensions()
         "returns, and they must be marked in sequence of return. The first "
         "return will have a Return Number of one, the second a Return "
         "Number of two, and so on up to five returns.");
-    return_number.setUUID("ffe5e5f8-4cec-4560-abf0-448008f7b89e");
-    return_number.setNamespace(s_getName());
-    output.push_back(return_number);
+    DIMENSION_BOOKKEEPING(return_number, "ffe5e5f8-4cec-4560-abf0-448008f7b89e")
 
     Dimension number_of_returns("NumberOfReturns", dimension::UnsignedInteger,
         1, "Number of Returns (for this emitted pulse): The Number of Returns "
         "is the total number of returns for a given pulse. For example, "
         "a laser data point may be return two (Return Number) within a "
         "total number of five returns.");
-    number_of_returns.setUUID("7c28bfd4-a9ed-4fb2-b07f-931c076fbaf0");
-    number_of_returns.setNamespace(s_getName());
-    output.push_back(number_of_returns);
+    DIMENSION_BOOKKEEPING(number_of_returns, "7c28bfd4-a9ed-4fb2-b07f-931c076fbaf0")
 
     Dimension scan_direction("ScanDirectionFlag", dimension::UnsignedInteger, 1,
         "The Scan Direction Flag denotes the direction at which the "
@@ -648,17 +630,13 @@ std::vector<Dimension> Reader::getDefaultDimensions()
         "of 0 is a negative scan direction (where positive scan direction "
         "is a scan moving from the left side of the in-track direction to "
         "the right side and negative the opposite).");
-    scan_direction.setUUID("13019a2c-cf88-480d-a995-0162055fe5f9");
-    scan_direction.setNamespace(s_getName());
-    output.push_back(scan_direction);
+    DIMENSION_BOOKKEEPING(scan_direction, "13019a2c-cf88-480d-a995-0162055fe5f9")
 
     Dimension edge("EdgeOfFlightLine", dimension::UnsignedInteger, 1,
         "The Edge of Flight Line data bit has a value of 1 only when "
         "the point is at the end of a scan. It is the last point on "
         "a given scan line before it changes direction.");
-    edge.setUUID("108c18f2-5cc0-4669-ae9a-f41eb4006ea5");
-    edge.setNamespace(s_getName());
-    output.push_back(edge);
+    DIMENSION_BOOKKEEPING(edge, "108c18f2-5cc0-4669-ae9a-f41eb4006ea5")
 
     Dimension classification("Classification", dimension::UnsignedInteger, 1,
         "Classification in LAS 1.0 was essentially user defined and optional. "
@@ -669,9 +647,7 @@ std::vector<Dimension> Reader::getDefaultDimensions()
         "for user defined operations. Note that the format for classification "
         "is a bit encoded field with the lower five bits used for class and "
         "the three high bits used for flags.");
-    classification.setUUID("b4c67de9-cef1-432c-8909-7c751b2a4e0b");
-    classification.setNamespace(s_getName());
-    output.push_back(classification);
+    DIMENSION_BOOKKEEPING(classification, "b4c67de9-cef1-432c-8909-7c751b2a4e0b")
 
     Dimension scan_angle("ScanAngleRank", dimension::SignedInteger, 1,
         "The Scan Angle Rank is a signed one-byte number with a "
@@ -683,15 +659,23 @@ std::vector<Dimension> Reader::getDefaultDimensions()
         "The scan angle is an angle based on 0 degrees being nadir, "
         "and 90 degrees to the left side of the aircraft in the "
         "direction of flight.");
-    scan_angle.setUUID("aaadaf77-e0c9-4df0-81a7-27060794cd69");
-    scan_angle.setNamespace(s_getName());
-    output.push_back(scan_angle);
+    DIMENSION_BOOKKEEPING(scan_angle, "aaadaf77-e0c9-4df0-81a7-27060794cd69")
 
+    Dimension scan_angle2("ScanAngleRank2", dimension::SignedInteger, 2,
+        "The Scan Angle Rank is a signed one-byte number with a "
+        "valid range from -90 to +90. The Scan Angle Rank is the "
+        "angle (rounded to the nearest integer in the absolute "
+        "value sense) at which the laser point was output from the "
+        "laser system including the roll of the aircraft. The scan "
+        "angle is within 1 degree of accuracy from +90 to 90 degrees. "
+        "The scan angle is an angle based on 0 degrees being nadir, "
+        "and 90 degrees to the left side of the aircraft in the "
+        "direction of flight.");
+    DIMENSION_BOOKKEEPING(scan_angle2, "de5e353f-916c-46b3-8c4a-f44fb6f4bf5f")
+            
     Dimension user_data("UserData", dimension::UnsignedInteger, 1,
         "This field may be used at the users discretion");
-    user_data.setUUID("70eb558e-63d4-4804-b1db-fc2fd716927c");
-    user_data.setNamespace(s_getName());
-    output.push_back(user_data);
+    DIMENSION_BOOKKEEPING(user_data, "70eb558e-63d4-4804-b1db-fc2fd716927c")
 
     Dimension point_source("PointSourceId", dimension::UnsignedInteger, 2,
         "This value indicates the file from which this point originated. "
@@ -703,59 +687,46 @@ std::vector<Dimension> Reader::getDefaultDimensions()
         "This implies that processing software should set the Point Source "
         "ID equal to the File Source ID of the file containing this point "
         "at some time during processing. ");
-    point_source.setUUID("4e42e96a-6af0-4fdd-81cb-6216ff47bf6b");
-    point_source.setNamespace(s_getName());
-    output.push_back(point_source);
+    DIMENSION_BOOKKEEPING(point_source, "4e42e96a-6af0-4fdd-81cb-6216ff47bf6b")
 
     Dimension packet_descriptor("WavePacketDescriptorIndex",
         dimension::UnsignedInteger, 1);
-    packet_descriptor.setUUID("1d095eb0-099f-4800-abb6-2272be486f81");
-    packet_descriptor.setNamespace(s_getName());
-    output.push_back(packet_descriptor);
+    DIMENSION_BOOKKEEPING(packet_descriptor, "1d095eb0-099f-4800-abb6-2272be486f81")
 
     Dimension packet_offset("WaveformDataOffset", dimension::UnsignedInteger, 8);
-    packet_offset.setUUID("6dee8edf-0c2a-4554-b999-20c9d5f0e7b9");
-    packet_offset.setNamespace(s_getName());
-    output.push_back(packet_offset);
+    DIMENSION_BOOKKEEPING(packet_offset, "6dee8edf-0c2a-4554-b999-20c9d5f0e7b9")
 
-    Dimension return_point("ReturnPointWaveformLocation",
+    Dimension ReturnPointWaveformLocation("ReturnPointWaveformLocation",
         dimension::UnsignedInteger, 4);
-    return_point.setUUID("f0f37962-2563-4c3e-858d-28ec15a1103f");
-    return_point.setNamespace(s_getName());
-    output.push_back(return_point);
+    DIMENSION_BOOKKEEPING(ReturnPointWaveformLocation, "f0f37962-2563-4c3e-858d-28ec15a1103f")
 
     Dimension wave_x("WaveformXt", dimension::Float, 4);
-    wave_x.setUUID("c0ec76eb-9121-4127-b3d7-af92ef871a2d");
-    wave_x.setNamespace(s_getName());
-    output.push_back(wave_x);
+    DIMENSION_BOOKKEEPING(wave_x, "c0ec76eb-9121-4127-b3d7-af92ef871a2d")
 
     Dimension wave_y("WaveformYt", dimension::Float, 4);
-    wave_y.setUUID("b3f5bb56-3c25-42eb-9476-186bb6b78e3c");
-    wave_y.setNamespace(s_getName());
-    output.push_back(wave_y);
+    DIMENSION_BOOKKEEPING(wave_y, "b3f5bb56-3c25-42eb-9476-186bb6b78e3c")
 
     Dimension wave_z("WaveformZt", dimension::Float, 4);
-    wave_z.setUUID("7499ae66-462f-4d0b-a449-6e5c721fb087");
-    wave_z.setNamespace(s_getName());
-    output.push_back(wave_z);
+    DIMENSION_BOOKKEEPING(wave_z, "7499ae66-462f-4d0b-a449-6e5c721fb087")
 
     Dimension red("Red", dimension::UnsignedInteger, 2,
         "The red image channel value associated with this point");
-    red.setUUID("a42ce297-6aa2-4a62-bd29-2db19ba862d5");
-    red.setNamespace(s_getName());
-    output.push_back(red);
+    DIMENSION_BOOKKEEPING(red, "a42ce297-6aa2-4a62-bd29-2db19ba862d5")
 
     Dimension blue("Blue", dimension::UnsignedInteger, 2,
         "The blue image channel value associated with this point");
-    blue.setUUID("5c1a99c8-1829-4d5b-8735-4f6f393a7970");
-    blue.setNamespace(s_getName());
-    output.push_back(blue);
+    DIMENSION_BOOKKEEPING(blue, "5c1a99c8-1829-4d5b-8735-4f6f393a7970")
 
     Dimension green("Green", dimension::UnsignedInteger, 2,
         "The green image channel value associated with this point");
-    green.setUUID("7752759d-5713-48cd-9842-51db350cc979");
-    green.setNamespace(s_getName());
-    output.push_back(green);
+    DIMENSION_BOOKKEEPING(green, "7752759d-5713-48cd-9842-51db350cc979")
+
+    Dimension nir("NIR", dimension::UnsignedInteger, 2,
+        "The NIR image channel value associated with this point");
+    DIMENSION_BOOKKEEPING(nir, "7efe5465-4ed5-4c4f-892b-0e8532fb2540")
+
+
+    
     return output;
 }
 
@@ -764,7 +735,6 @@ namespace iterators
 
 Base::Base(pdal::drivers::las2::Reader const& reader)
     : m_reader(reader)
-    , m_istream(m_reader.getStreamFactory().allocate())
 {
 //     m_istream.seekg(m_reader.getLasHeader().GetDataOffset());
 // 
@@ -787,7 +757,6 @@ Base::~Base()
 //     m_unzipper.reset();
 // #endif
 
-    m_reader.getStreamFactory().deallocate(m_istream);
 }
 
 
@@ -831,6 +800,14 @@ void Base::initialize()
 void Base::read(PointBuffer&)
 {}
 
+bool Base::open()
+{
+    las_.open(getReader().getOptions().getValueOrThrow<std::string>("filename"));
+    getReader().log()->get(logDEBUG) << "Header point count: " << las_.header.number_of_point_records <<std::endl;
+
+    return true;
+}
+
 namespace sequential
 {
 
@@ -844,7 +821,11 @@ Reader::~Reader()
 {}
 
 void Reader::readBeginImpl()
-{}
+{
+    getReader().log()->get(logDEBUG) << "readBeginImpl: " <<std::endl;
+
+    Base::open();
+}
 
 
 void Reader::readBufferBeginImpl(PointBuffer& buffer)
@@ -882,6 +863,8 @@ bool Reader::atEndImpl() const
 
 boost::uint32_t Reader::readBufferImpl(PointBuffer& data)
 {
+
+    getReader().log()->get(logDEBUG) << "readBufferImpl: " <<std::endl;    
     // PointDimensions cachedDimensions(data.getSchema(), m_reader.getName());
 // #ifdef PDAL_HAVE_LASZIP
 //     return m_reader.processBuffer(data, m_istream,
@@ -892,6 +875,7 @@ boost::uint32_t Reader::readBufferImpl(PointBuffer& data)
 //         getStage().getNumPoints()-this->getIndex(), NULL, NULL,
 //         &cachedDimensions, m_read_buffer);
 // #endif
+    data.setNumPoints(data.getCapacity());
 }
 
 } // sequential

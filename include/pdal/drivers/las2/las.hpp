@@ -54,6 +54,23 @@ typedef struct vlr
   uint8_t* data;
 } vlr_struct;
 
+enum Id
+{
+    PointFormat0 = 0,         // base
+    PointFormat1 = 1,         // base + time
+    PointFormat2 = 2,         // base + color
+    PointFormat3 = 3,         // base + time + color
+    PointFormat4 = 4,         // base + time + wave
+    PointFormat5 = 5,         // LAS 1.4
+    PointFormat6 = 6,         // LAS 1.4
+    PointFormat7 = 7,         // LAS 1.4
+    PointFormat8 = 8,         // LAS 1.4
+    PointFormat9 = 9,         // LAS 1.4
+    PointFormat10 = 10,         // LAS 1.4
+    PointFormatUnknown = 99
+};
+
+
 typedef struct header
 {
   uint16_t file_source_ID;
@@ -75,18 +92,10 @@ typedef struct header
   uint16_t point_data_record_length;
   uint32_t number_of_point_records;
   uint32_t number_of_points_by_return[5];
-  double x_scale_factor;
-  double y_scale_factor;
-  double z_scale_factor;
-  double x_offset;
-  double y_offset;
-  double z_offset;
-  double max_x;
-  double min_x;
-  double max_y;
-  double min_y;
-  double max_z;
-  double min_z;
+  double scale[3];
+  double offset[3];
+  double maxs[3];
+  double mins[3];
 
   // LAS 1.3 and higher only
   uint64_t start_of_waveform_data_packet_record;
@@ -108,6 +117,47 @@ typedef struct header
   uint32_t user_data_after_header_size;
   uint8_t* user_data_after_header;
 
+
+  bool hasRGB() const
+  {
+      return ( (point_data_format == PointFormat2) 
+          || (point_data_format == PointFormat3) 
+          || (point_data_format == PointFormat5) 
+          || (point_data_format == PointFormat7)
+          || (point_data_format == PointFormat8)
+              );
+  }
+
+  bool hasNIR() const
+  {
+      return ( point_data_format == PointFormat7)
+          || ( point_data_format == PointFormat8)
+          || ( point_data_format == PointFormat10)
+              ;
+  }
+
+  bool hasTime() const
+  {
+      return (point_data_format == PointFormat1) 
+          || (point_data_format == PointFormat3) 
+          || (point_data_format == PointFormat4) 
+          || (point_data_format == PointFormat5)
+          || (point_data_format == PointFormat6)
+          || (point_data_format == PointFormat7)
+          || (point_data_format == PointFormat8)
+          || (point_data_format == PointFormat9)
+          || (point_data_format == PointFormat10)
+              ;
+  }
+
+  bool hasWave() const
+  {
+      return (point_data_format == PointFormat4) 
+          || (point_data_format == PointFormat5)
+          || (point_data_format == PointFormat9)
+          || (point_data_format == PointFormat10)
+              ;
+  }
 } header_struct;
 
 typedef struct laszip_point
@@ -145,65 +195,84 @@ typedef struct laszip_point
 
 class las_file : public boost::noncopyable {
 public:
-	las_file() : is_open_(false) {
+	las_file() 
+        
+    : count_(0)
+    , is_open_(false) 
+    {
     }
 
 	~las_file() {
 		close();
 	}
-
-	void open(const std::string& filename, int offset = 0, int count = -1) {
-		using namespace boost::interprocess;
-        
-        start_offset_ = offset;
-        count_ = count;
-
-		pmapping_.reset(new file_mapping(filename.c_str(), read_only));
-		pregion_.reset(new mapped_region(*pmapping_, read_only));
-
+    
+    bool readHeader()
+    {
 		void *addr = pregion_->get_address();
-
+        size_t position(0);
 		std::string magic((char *)addr, (char *)addr + 4);
 		if (!boost::iequals(magic, "LASF")) {
 			throw std::runtime_error("Not a las file");
 		}
+        position += 4;
+        header.file_source_ID = readAs<uint16_t>(position);
+        position += sizeof(header.file_source_ID);
+        
+        header.global_encoding = readAs<uint16_t>(position);
+        position += sizeof(header.global_encoding);
+        
+        
+        // head
+		header.version_major = readAs<char>(24);
+		header.version_minor = readAs<char>(25);
 
-		char versionMajor = readAs<char>(24);
-		char versionMinor = readAs<char>(25);
-
-		if ((int)(versionMajor * 10 + versionMinor) >= 13) {
-			throw std::runtime_error("Only version 1.0-1.2 files are supported");
+		if ((int)(header.version_major * 10 + header.version_minor) >= 15) {
+			throw std::runtime_error("Only version 1.0-1.4 files are supported");
 		}
 
-		points_offset_ = readAs<unsigned int>(32*3);
-		points_format_id_ = readAs<unsigned char>(32*3 + 8);
-		points_struct_size_ = readAs<unsigned short>(32*3 + 8 + 1);
-		points_count_ = readAs<unsigned int>(32*3 + 11);
+		header.offset_to_point_data = readAs<unsigned int>(32*3);
+		header.point_data_format = readAs<unsigned char>(32*3 + 8);
+		header.point_data_record_length = readAs<unsigned short>(32*3 + 8 + 1);
+		header.number_of_point_records = readAs<unsigned int>(32*3 + 11);
 
         // std::cerr << "points count: " << points_count_ << std::endl;
 
 		size_t start = 32*3 + 35;
-		readN(start, scale_, 3); start += sizeof(double) * 3;
-		readN(start, offset_, 3); start += sizeof(double) * 3;
+		readN(start, header.scale, 3); start += sizeof(double) * 3;
+		readN(start, header.offset, 3); start += sizeof(double) * 3;
 
-		maxs_[0] = readAs<double>(start); mins_[0] = readAs<double>(start + sizeof(double)); start += 2*sizeof(double);
-		maxs_[1] = readAs<double>(start); mins_[1] = readAs<double>(start + sizeof(double)); start += 2*sizeof(double);
-		maxs_[2] = readAs<double>(start); mins_[2] = readAs<double>(start + sizeof(double)); start += 2*sizeof(double);
+		header.maxs[0] = readAs<double>(start); header.mins[0] = readAs<double>(start + sizeof(double)); start += 2*sizeof(double);
+		header.maxs[1] = readAs<double>(start); header.mins[1] = readAs<double>(start + sizeof(double)); start += 2*sizeof(double);
+		header.maxs[2] = readAs<double>(start); header.mins[2] = readAs<double>(start + sizeof(double)); start += 2*sizeof(double);
 
         // std::cerr << "region size: " << pregion_->get_size() << std::endl;
         // std::cerr << "points offset: " << points_offset_ << std::endl;
 
 
-		uint64_t diff = pregion_->get_size() - points_offset_;
+		uint64_t diff = pregion_->get_size() - header.offset_to_point_data;
 
 		if (diff % stride() != 0)
 			throw std::runtime_error("Point record data size is inconsistent");
 
-		if (diff / stride() != points_count_)
+		if (diff / stride() != header.number_of_point_records)
 			throw std::runtime_error("Point record count is inconsistent with computed point records size");
         
         updateMinsMaxes();
+        return true;
         
+    }
+	void open(const std::string& filename, int offset = 0, int count = -1) {
+		using namespace boost::interprocess;
+        
+        start_offset_ = offset;
+        count_ = (size_t)count;
+
+		pmapping_.reset(new file_mapping(filename.c_str(), read_only));
+		pregion_.reset(new mapped_region(*pmapping_, read_only));
+        
+
+        
+        readHeader();
         is_open_ = true;
 	}
 
@@ -212,7 +281,7 @@ public:
 	}
 
 	void *points_offset() {
-		return (char *)pregion_->get_address() + points_offset_ + start_offset_;
+		return (char *)pregion_->get_address() + header.offset_to_point_data + start_offset_;
 	}
 
 	void close() {
@@ -221,37 +290,15 @@ public:
         is_open_ = false;
 	}
 
-	size_t stride() {
-		if (points_struct_size_ != 0)
-			return points_struct_size_;
+	size_t stride() 
+    {
+        return header.point_data_record_length;
+    }
 
-		switch(points_format_id_) {
-    		case 0:
-    			return 20;
-    		case 1:
-    			return 28;
-    		case 2:
-    			return 26;
-    		case 3:
-    			return 28+6;
-    		default:
-    			break;
-		}
-		throw std::runtime_error("Unknown point format");
+	size_t points_count() const 
+    {
+        return header.number_of_point_records;
 	}
-
-	size_t points_count() const {
-        if (count_ == -1)
-            return points_count_;
-        
-        return std::min(points_count_, (unsigned int)count_);
-	}
-
-	double* minimums() { return mins_; }
-	double* maximums() { return maxs_; }
-
-	double *scale() { return scale_; }
-	double *offset() { return offset_; }
     
     bool is_open() { return is_open_; }
     
@@ -287,6 +334,7 @@ public:
         
         return z;
     }
+
     
 private:
     void updateMinsMaxes() {
@@ -329,20 +377,20 @@ private:
 		}
 	}
 
+public:
+    header_struct header;
+    
 private:
 	boost::shared_ptr<boost::interprocess::file_mapping> pmapping_;
 	boost::shared_ptr<boost::interprocess::mapped_region> pregion_;
 
     unsigned int start_offset_;
-	int count_;
-	unsigned int points_offset_;
-	unsigned char points_format_id_;
-	unsigned int points_count_;
-	unsigned short points_struct_size_;
+    int64_t count_;
 
 	double scale_[3], offset_[3], mins_[3], maxs_[3];
     
     bool is_open_;
+
 };
 
 } // namespace las
