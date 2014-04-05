@@ -78,6 +78,10 @@ MAKE_READER_CREATOR(SqliteReader, pdal::drivers::sqlite::Reader)
 #endif
 #endif
 
+#ifdef PDAL_HAVE_PCL
+MAKE_READER_CREATOR(PcdReader, pdal::drivers::pcd::Reader);
+#endif
+
 #ifdef PDAL_HAVE_POSTGRESQL
 #ifndef USE_PDAL_PLUGIN_PGPOINTCLOUD
 MAKE_READER_CREATOR(PgPcReader, pdal::drivers::pgpointcloud::Reader)
@@ -140,6 +144,10 @@ MAKE_WRITER_CREATOR(OciWriter, pdal::drivers::oci::Writer)
 MAKE_WRITER_CREATOR(P2GWriter, pdal::drivers::p2g::Writer)
 #endif
 
+#ifdef PDAL_HAVE_PCL
+MAKE_WRITER_CREATOR(PcdWriter, pdal::drivers::pcd::Writer);
+#endif
+
 #ifdef PDAL_HAVE_SQLITE
 #ifndef USE_PDAL_PLUGIN_SQLITE
 MAKE_WRITER_CREATOR(SqliteWriter, pdal::drivers::sqlite::Writer)
@@ -186,6 +194,9 @@ std::string StageFactory::inferReaderDriver(const std::string& filename, pdal::O
     drivers["ntf"] = "drivers.nitf.reader";
     drivers["bpf"] = "drivers.bpf.reader";
     drivers["sbet"] = "drivers.sbet.reader";
+#ifdef PDAL_HAVE_PCL
+    drivers["pcd"] = "drivers.pcd.reader";
+#endif
 
     if (boost::algorithm::iequals(filename, "STDIN"))
     {
@@ -212,9 +223,9 @@ std::string StageFactory::inferWriterDriver(const std::string& filename, pdal::O
         options.add("compression", true);
     }
 
-    if (boost::algorithm::iequals(ext,".pcd"))
+    if (boost::algorithm::iequals(ext,".json"))
     {
-        options.add("format","PCD");
+        options.add("format","GEOJSON");
     }
 
     options.add<std::string>("filename", filename);
@@ -222,7 +233,11 @@ std::string StageFactory::inferWriterDriver(const std::string& filename, pdal::O
     std::map<std::string, std::string> drivers;
     drivers["las"] = "drivers.las.writer";
     drivers["laz"] = "drivers.las.writer";
-    drivers["pcd"] = "drivers.text.writer";
+#ifdef PDAL_HAVE_PCL
+    drivers["pcd"] = "drivers.pcd.writer";
+#endif
+    drivers["csv"] = "drivers.text.writer";
+    drivers["json"] = "drivers.text.writer";
     drivers["xyz"] = "drivers.text.writer";
     drivers["txt"] = "drivers.text.writer";
     drivers["ntf"] = "drivers.nitf.writer";
@@ -381,6 +396,10 @@ void StageFactory::registerKnownReaders()
 #endif
 #endif
 
+#ifdef PDAL_HAVE_PCL
+    REGISTER_READER(PcdReader, pdal::drivers::pcd::Reader);
+#endif
+
 #ifdef PDAL_HAVE_POSTGRESQL
 #ifndef USE_PDAL_PLUGIN_PGPOINTCLOUD
     REGISTER_READER(PgPcReader, pdal::drivers::pgpointcloud::Reader);
@@ -446,6 +465,10 @@ void StageFactory::registerKnownWriters()
 
 #ifdef PDAL_HAVE_P2G
     REGISTER_WRITER(P2GWriter, pdal::drivers::p2g::Writer);
+#endif
+
+#ifdef PDAL_HAVE_PCL
+    REGISTER_WRITER(PcdWriter, pdal::drivers::pcd::Writer);
 #endif
 
 #ifdef PDAL_HAVE_SQLITE

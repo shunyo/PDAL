@@ -1,5 +1,5 @@
 /******************************************************************************
-* Copyright (c) 2011, Howard Butler, hobu.inc@gmail.com
+* Copyright (c) 2014, Brad Chambers (brad.chambers@gmail.com)
 *
 * All rights reserved.
 *
@@ -32,8 +32,8 @@
 * OF SUCH DAMAGE.
 ****************************************************************************/
 
-#ifndef INCLUDED_DRIVERS_TEXT_WRITER_HPP
-#define INCLUDED_DRIVERS_TEXT_WRITER_HPP
+#ifndef INCLUDED_DRIVERS_PCD_WRITER_HPP
+#define INCLUDED_DRIVERS_PCD_WRITER_HPP
 
 #include <pdal/Writer.hpp>
 #include <pdal/FileUtils.hpp>
@@ -46,41 +46,27 @@
 #include <vector>
 #include <string>
 
-// pdal::Writer* createTextWriter(pdal::Stage& prevStage, const pdal::Options& options);
-
 
 namespace pdal
 {
 namespace drivers
 {
-namespace text
+namespace pcd
 {
 
-typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
-
-class text_driver_error : public pdal_error
+class pcd_driver_error : public pdal_error
 {
 public:
-    text_driver_error(std::string const& msg)
+    pcd_driver_error(std::string const& msg)
         : pdal_error(msg)
     {}
 };
 
-#ifdef USE_PDAL_PLUGIN_TEXT
-PDAL_C_START
-
-PDAL_DLL void PDALRegister_writer_text(void* factory);
-
-PDAL_C_END
-#endif
-
-typedef boost::shared_ptr<std::ostream> FileStreamPtr;
-
 class PDAL_DLL Writer : public pdal::Writer
 {
 public:
-    SET_STAGE_NAME("drivers.text.writer", "Text Writer")
-    SET_STAGE_LINK("http://pdal.io/stages/drivers.text.writer.html")
+    SET_STAGE_NAME("drivers.pcd.writer", "PCD Writer")
+    SET_STAGE_LINK("http://pdal.io/stages/drivers.pcd.writer.html")
 
     Writer(Stage& prevStage, const Options&);
     ~Writer();
@@ -95,26 +81,11 @@ protected:
 
 private:
 
-    Writer& operator=(const Writer&); // not implemented
-    Writer(const Writer&); // not implemented
+//    Writer& operator=(const Writer&); // not implemented
+//    Writer(const Writer&); // not implemented
 
-    void putStringRepresentation(PointBuffer const& data,
-                                        Dimension const& d,
-                                        std::size_t pointIndex,
-                                        std::ostream& strm);
-
-    void WriteHeader(pdal::Schema const& schema);
-    
-    void WriteGeoJSONHeader(pdal::Schema const& schema);
-    void WriteCSVHeader(pdal::Schema const& schema);
-    
-    void WriteCSVBuffer(const PointBuffer& data);
-    void WriteGeoJSONBuffer(const PointBuffer& data);
-    
-    std::vector<boost::tuple<std::string, std::string> >  getDimensionOrder(pdal::Schema const& schema) const;
-    FileStreamPtr m_stream;
-    bool bWroteHeader;
-    bool bWroteFirstPoint;
+    std::string m_filename;
+    bool m_compressed;
 };
 
 }

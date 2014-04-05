@@ -312,75 +312,6 @@ void Writer::WriteCSVHeader(pdal::Schema const& schema)
 
 }
 
-void Writer::WritePCDHeader(pdal::Schema const& schema)
-{
-
-    boost::optional<Dimension const&> dimRed = schema.getDimensionOptional("Red");
-    boost::optional<Dimension const&> dimGreen = schema.getDimensionOptional("Green");
-    boost::optional<Dimension const&> dimBlue = schema.getDimensionOptional("Blue");
-
-    bool bHaveColor(false);
-    bool bRGBPacked  = getOptions().getValueOrDefault<bool>("pack_rgb", true);
-
-
-
-    if (dimRed && dimGreen && dimBlue)
-        bHaveColor = true;
-
-    *m_stream << "# .PCD v.7 - Point Cloud Data file format" << std::endl;
-
-    *m_stream << "VERSION 0.7" << std::endl;
-
-    *m_stream << "FIELDS x y z";
-    if (bHaveColor)
-    {
-        if (bRGBPacked)
-            *m_stream << " rgb";
-        else
-            *m_stream << " r g b";
-    }
-    *m_stream << std::endl;
-
-    *m_stream << "SIZE 4 4 4";
-    if (bHaveColor)
-    {
-        if (bRGBPacked)
-            *m_stream << " 1";
-        else
-            *m_stream << " 1 1 1";
-    }
-    *m_stream << std::endl;
-
-    *m_stream << "TYPE f f f";
-    if (bHaveColor)
-    {
-        if (bRGBPacked)
-            *m_stream << " f";
-        else
-            *m_stream << " u u u";
-    }
-    *m_stream << std::endl;
-
-    *m_stream << "COUNT 1 1 1";
-    if (bHaveColor)
-    {
-        if (bRGBPacked)
-            *m_stream << " 1";
-        else
-            *m_stream << " 1 1 1";
-    }
-    *m_stream << std::endl;
-
-    boost::uint64_t width = getPrevStage().getNumPoints();
-    *m_stream << "WIDTH " << width << std::endl;
-
-    *m_stream << "HEIGHT 1" << std::endl;
-    *m_stream << "VIEWPOINT 0 0 0 1 0 0 0" << std::endl;
-    *m_stream << "POINTS " << width << std::endl;
-
-    *m_stream << "DATA ascii" << std::endl;
-    return;
-}
 
 void Writer::WriteHeader(pdal::Schema const& schema)
 {
@@ -424,13 +355,6 @@ void Writer::WriteHeader(pdal::Schema const& schema)
     if (bCSV)
     {
         WriteCSVHeader(schema);
-        return;
-    }
-
-    bool bPCD = boost::iequals(outputType, "PCD");
-    if (bPCD)
-    {
-        WritePCDHeader(schema);
         return;
     }
 
@@ -531,63 +455,6 @@ void Writer::WriteCSVBuffer(const PointBuffer& data)
     }
 }
 
-void Writer::WritePCDBuffer(const PointBuffer& data)
-{
-    pdal::Schema const& schema = data.getSchema();
-
-    Dimension const& x = schema.getDimension("X");
-    Dimension const& y = schema.getDimension("Y");
-    Dimension const& z = schema.getDimension("Z");
-
-    boost::optional<Dimension const&> dimRed = schema.getDimensionOptional("Red");
-    boost::optional<Dimension const&> dimGreen = schema.getDimensionOptional("Green");
-    boost::optional<Dimension const&> dimBlue = schema.getDimensionOptional("Blue");
-
-    bool bHaveColor(false);
-    if (dimRed && dimGreen && dimBlue)
-        bHaveColor = true;
-
-    bool bRGBPacked = getOptions().getValueOrDefault<bool>("pack_rgb", true);
-
-    boost::uint32_t idx(0);
-    while (idx != data.getNumPoints())
-    {
-        putStringRepresentation(data, x, idx, *m_stream);
-        *m_stream << " ";
-        putStringRepresentation(data, y, idx, *m_stream);
-        *m_stream << " ";
-        putStringRepresentation(data, z, idx, *m_stream);
-        *m_stream << " ";
-
-        std::string color;
-        if (bHaveColor)
-        {
-            if (bRGBPacked)
-            {
-                uint16_t r = data.getFieldAs<uint16_t>(*dimRed, idx, false);
-                uint16_t g = data.getFieldAs<uint16_t>(*dimGreen, idx, false);
-                uint16_t b = data.getFieldAs<uint16_t>(*dimBlue, idx, false);
-                int rgb = ((int)r) << 16 | ((int)g) << 8 | ((int)b);
-                m_stream->precision(8);
-                *m_stream << static_cast<float>(rgb);
-            }
-            else
-            {
-                putStringRepresentation(data, *dimRed, idx, *m_stream);
-                *m_stream << " ";
-
-                putStringRepresentation(data, *dimGreen, idx, *m_stream);
-                *m_stream << " ";
-
-                putStringRepresentation(data, *dimBlue, idx, *m_stream);
-                *m_stream << " ";
-            }
-        }
-
-        *m_stream << "\n";
-        idx++;
-    }
-}
 
 void Writer::WriteGeoJSONBuffer(const PointBuffer& data)
 {
@@ -672,7 +539,6 @@ boost::uint32_t Writer::writeBuffer(const PointBuffer& data)
     std::string outputType = getOptions().getValueOrDefault<std::string>("format", "csv");
     bool bCSV = boost::iequals(outputType, "CSV");
     bool bGeoJSON = boost::iequals(outputType, "GEOJSON");
-    bool bPCD = boost::iequals(outputType, "PCD");
 
     if (!bWroteHeader)
     {
@@ -689,10 +555,6 @@ boost::uint32_t Writer::writeBuffer(const PointBuffer& data)
     {
         WriteGeoJSONBuffer(data);
 
-    }
-    else if (bPCD)
-    {
-        WritePCDBuffer(data);
     }
 
 

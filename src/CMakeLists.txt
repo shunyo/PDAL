@@ -71,6 +71,10 @@ set(PDAL_BASE_HPP
   "${PDAL_HEADERS_DIR}/third/string_ref_fwd.hpp"
 )
 
+if (PDAL_HAVE_PCL)
+    list (APPEND PDAL_BASE_HPP "${PDAL_HEADERS_DIR}/PCLConversions.hpp")
+endif()
+
 if (PDAL_HAVE_LIBXML2)
   SET (PDAL_XML_SRC XMLSchema.cpp)
 endif()
@@ -379,6 +383,29 @@ if (P2G_FOUND)
 endif()
 
 #
+# drivers/pcd
+#
+set(PDAL_PCD_PATH drivers/pcd)
+set(PDAL_PCD_HEADERS "${PDAL_HEADERS_DIR}/${PDAL_PCD_PATH}")
+set(PDAL_PCD_SRC "${PROJECT_SOURCE_DIR}/src/${PDAL_PCD_PATH}")
+
+set(PDAL_DRIVERS_PCD_HPP
+    "${PDAL_PCD_HEADERS}/point_types.hpp"
+    "${PDAL_PCD_HEADERS}/Reader.hpp"
+    "${PDAL_PCD_HEADERS}/Writer.hpp"
+)
+
+set (PDAL_DRIVERS_PCD_CPP 
+    "${PDAL_PCD_SRC}/Reader.cpp"
+    "${PDAL_PCD_SRC}/Writer.cpp"
+)
+
+if (WITH_PCL)
+    list (APPEND PDAL_CPP ${PDAL_DRIVERS_PCD_CPP} )
+    list (APPEND PDAL_HPP ${PDAL_DRIVERS_PCD_HPP} )
+endif()
+
+#
 # drivers/text
 #
 set(PDAL_TEXT_PATH drivers/text)
@@ -529,7 +556,6 @@ set(PDAL_FILTERS_HPP
   "${PDAL_FILTERS_HEADERS}/HexBin.hpp"
   "${PDAL_FILTERS_HEADERS}/InPlaceReprojection.hpp"
   "${PDAL_FILTERS_HEADERS}/Mosaic.hpp"
-  "${PDAL_FILTERS_HEADERS}/PCLBlock.hpp"
   "${PDAL_FILTERS_HEADERS}/PointBufferCache.hpp"
   "${PDAL_FILTERS_HEADERS}/Predicate.hpp"
   "${PDAL_FILTERS_HEADERS}/Programmable.hpp"
@@ -551,7 +577,6 @@ set (PDAL_FILTERS_CPP
   "${PDAL_FILTERS_SRC}/HexBin.cpp"
   "${PDAL_FILTERS_SRC}/InPlaceReprojection.cpp"
   "${PDAL_FILTERS_SRC}/Mosaic.cpp"
-  "${PDAL_FILTERS_SRC}/PCLBlock.cpp"
   "${PDAL_FILTERS_SRC}/PointBufferCache.cpp"
   "${PDAL_FILTERS_SRC}/Predicate.cpp"
   "${PDAL_FILTERS_SRC}/Programmable.cpp"  
@@ -561,6 +586,11 @@ set (PDAL_FILTERS_CPP
   "${PDAL_FILTERS_SRC}/Splitter.cpp"
   "${PDAL_FILTERS_SRC}/Stats.cpp"
 )
+
+if (PDAL_HAVE_PCL)
+    list (APPEND PDAL_FILTERS_CPP "${PDAL_FILTERS_SRC}/PCLBlock.cpp")
+    list (APPEND PDAL_FILTERS_HPP "${PDAL_FILTERS_HEADERS}/PCLBlock.hpp")
+endif()
 
 list (APPEND PDAL_CPP ${PDAL_FILTERS_CPP} )
 list (APPEND PDAL_HPP ${PDAL_FILTERS_HPP} )
