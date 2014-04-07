@@ -134,14 +134,14 @@ Options Reader::getDefaultOptions()
 pdal::StageSequentialIterator*
 Reader::createSequentialIterator(PointBuffer& buffer) const
 {
-    return new pdal::drivers::las2::iterators::sequential::Reader(*this, buffer);
+    return new pdal::drivers::las2::iterators::sequential::Reader(*this, buffer, getNumPoints());
 }
 
 
 pdal::StageRandomIterator*
 Reader::createRandomIterator(PointBuffer& buffer) const
 {
-    return new pdal::drivers::las2::iterators::random::Reader(*this, buffer);
+    return new pdal::drivers::las2::iterators::random::Reader(*this, buffer, getNumPoints());
 }
 
 
@@ -812,8 +812,10 @@ namespace sequential
 {
 
 
-Reader::Reader(pdal::drivers::las2::Reader const& reader, PointBuffer& buffer)
-    : Base(reader), pdal::ReaderSequentialIterator(reader, buffer)
+Reader::Reader(pdal::drivers::las2::Reader const& reader, PointBuffer& buffer,
+        boost::uint32_t numPoints)
+    : Base(reader), pdal::ReaderSequentialIterator(buffer),
+    m_numPoints(numPoints)
 {}
 
 
@@ -857,7 +859,7 @@ boost::uint64_t Reader::skipImpl(boost::uint64_t count)
 
 bool Reader::atEndImpl() const
 {
-    return getIndex() >= getStage().getNumPoints();
+    return getIndex() >= m_numPoints;
 }
 
 
@@ -883,8 +885,11 @@ boost::uint32_t Reader::readBufferImpl(PointBuffer& data)
 namespace random
 {
 
-Reader::Reader(const pdal::drivers::las2::Reader& reader, PointBuffer& buffer)
-    : Base(reader), pdal::ReaderRandomIterator(reader, buffer)
+Reader::Reader(pdal::drivers::las2::Reader const& reader, PointBuffer& buffer,
+        boost::uint32_t numPoints)
+    : Base(reader) 
+    , pdal::ReaderRandomIterator(buffer)
+    , m_numPoints(numPoints)
 {}
 
 
