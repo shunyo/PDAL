@@ -35,12 +35,15 @@ set(PDAL_BASE_HPP
   "${PDAL_HEADERS_DIR}/GDALUtils.hpp"
   "${PDAL_HEADERS_DIR}/GlobalEnvironment.hpp"
   "${PDAL_HEADERS_DIR}/gitsha.h"
+  "${PDAL_HEADERS_DIR}/IStream.hpp"
   "${PDAL_HEADERS_DIR}/Kernel.hpp"
   "${PDAL_HEADERS_DIR}/Log.hpp"
   "${PDAL_HEADERS_DIR}/Metadata.hpp"
   "${PDAL_HEADERS_DIR}/MultiFilter.hpp"
   "${PDAL_HEADERS_DIR}/MultiFilterIterator.hpp"
+  "${PDAL_HEADERS_DIR}/NullPointBuffer.hpp"
   "${PDAL_HEADERS_DIR}/Options.hpp"
+  "${PDAL_HEADERS_DIR}/OStream.hpp"
   "${PDAL_HEADERS_DIR}/PipelineManager.hpp"
   "${PDAL_HEADERS_DIR}/PipelineReader.hpp"
   "${PDAL_HEADERS_DIR}/PipelineWriter.hpp"
@@ -84,7 +87,7 @@ set(PDAL_BASE_CPP
   Metadata.cpp
   MultiFilter.cpp
   MultiFilterIterator.cpp
-#  Object.cpp
+  NullPointBuffer.cpp
   Options.cpp
   PipelineManager.cpp
   PipelineReader.cpp
@@ -600,7 +603,7 @@ set(PDAL_KERNEL_HPP
     ${PDAL_KERNEL_HEADERS}/Info.hpp
     ${PDAL_KERNEL_HEADERS}/Kernel.hpp
     ${PDAL_KERNEL_HEADERS}/Pipeline.hpp
-    ${PDAL_KERNEL_HEADERS}/Query.hpp
+    ${PDAL_KERNEL_HEADERS}/Delta.hpp
     ${PDAL_KERNEL_HEADERS}/Translate.hpp
 )
 
@@ -610,7 +613,7 @@ set(PDAL_KERNEL_CPP
     ${PDAL_KERNEL_SRC}/Diff.cpp
     ${PDAL_KERNEL_SRC}/Info.cpp
     ${PDAL_KERNEL_SRC}/Pipeline.cpp
-    ${PDAL_KERNEL_SRC}/Query.cpp
+    ${PDAL_KERNEL_SRC}/Delta.cpp
     ${PDAL_KERNEL_SRC}/Translate.cpp
 )
 
@@ -724,6 +727,10 @@ if (WITH_PCL)
     target_link_libraries(${PDAL_LIB_NAME} ${PDAL_LINKAGE} ${PCL_LIBRARIES})
 endif()
 
+if (WITH_LIBXML2)
+    target_link_libraries(${PDAL_LIB_NAME} ${PDAL_LINKAGE} ${LIBXML2_LIBRARIES})
+endif()
+
   target_link_libraries(${PDAL_LIB_NAME} ${PDAL_LINKAGE}
     "${PDAL_LIB_NAME}"
     "${CMAKE_THREAD_LIBS_INIT}"
@@ -732,7 +739,6 @@ endif()
     "${MRSID_LIBRARY}"
     "${GEOTIFF_LIBRARY}"
     "${GDAL_LIBRARY}"
-    ${LIBXML2_LIBRARIES}
     "${P2G_LIBRARY}"
     "${GEOS_LIBRARY}"
     "${HEXER_LIBRARY}"

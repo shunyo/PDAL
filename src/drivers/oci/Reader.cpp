@@ -124,7 +124,6 @@ void Reader::initialize()
         bool bDidRead = m_initialQueryStatement->Fetch();
 
         if (!bDidRead) throw pdal_error("Unable to fetch a point cloud entry entry!");
-        Schema& schema = getSchemaRef();
 
         try
         {
@@ -138,38 +137,38 @@ void Reader::initialize()
 
         }
 
-        schema = fetchSchema(m_initialQueryStatement, m_block->pc, m_capacity);
-        schema.setOrientation(schema::POINT_INTERLEAVED);
+        m_schema = fetchSchema(m_initialQueryStatement, m_block->pc, m_capacity);
+        m_schema.setOrientation(schema::POINT_INTERLEAVED);
 
         bool bNormalizeXYZ = getOptions().getValueOrDefault<bool>("do_normalize_xyz", true);
         if (bNormalizeXYZ)
         {
-            Dimension x = schema.getDimension("drivers.oci.reader.X");
+            Dimension x = m_schema.getDimension("drivers.oci.reader.X");
             double scale_x = getOptions().getValueOrDefault<double>("scale_x", x.getNumericScale());
             x.setNumericScale(scale_x);
             
             double offset_x = getOptions().getValueOrDefault<double>("offset_x", x.getNumericOffset());
             x.setNumericOffset(offset_x);
             
-            schema.setDimension(x);
+            m_schema.setDimension(x);
             
-            Dimension y = schema.getDimension("drivers.oci.reader.Y");
+            Dimension y = m_schema.getDimension("drivers.oci.reader.Y");
             double scale_y = getOptions().getValueOrDefault<double>("scale_y", y.getNumericScale());
             y.setNumericScale(scale_y);
             
             double offset_y = getOptions().getValueOrDefault<double>("offset_y", y.getNumericOffset());
             y.setNumericOffset(offset_y);
             
-            schema.setDimension(y);
+            m_schema.setDimension(y);
 
-            Dimension z = schema.getDimension("drivers.oci.reader.Z");
+            Dimension z = m_schema.getDimension("drivers.oci.reader.Z");
             double scale_z = getOptions().getValueOrDefault<double>("scale_z", z.getNumericScale());
             z.setNumericScale(scale_z);
         
             double offset_z = getOptions().getValueOrDefault<double>("offset_z", z.getNumericOffset());
             z.setNumericOffset(offset_z);
         
-            schema.setDimension(z);
+            m_schema.setDimension(z);
         }
 
     }
@@ -533,7 +532,7 @@ pdal::Schema Reader::fetchSchema(Statement statement, sdo_pc* pc, boost::uint32_
 
 pdal::StageSequentialIterator* Reader::createSequentialIterator(PointBuffer& buffer) const
 {
-    return new pdal::drivers::oci::iterators::sequential::Reader(*this, buffer);
+    return new pdal::drivers::oci::iterators::sequential::Reader(*this, buffer, getNumPoints(), log());
 }
 
 namespace iterators
@@ -980,9 +979,11 @@ pdal::Bounds<double> IteratorBase::getBounds(Statement statement, BlockPtr block
 //
 //---------------------------------------------------------------------------
 
-Reader::Reader(const pdal::drivers::oci::Reader& reader, PointBuffer& buffer)
+Reader::Reader(const pdal::drivers::oci::Reader& reader, PointBuffer& buffer, boost::uint32_t numPoints, LogPtr log)
     : IteratorBase(reader)
-    , pdal::StageSequentialIterator(reader, buffer)
+    , pdal::StageSequentialIterator(buffer)
+    , m_numPoints(numPoints)
+    , m_log(log)
 {
     return;
 }

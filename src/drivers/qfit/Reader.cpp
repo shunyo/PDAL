@@ -433,44 +433,42 @@ std::string Reader::getFileName() const
 
 void Reader::registerFields()
 {
-    Schema& schema = getSchemaRef();
-
     Schema dimensions(getDefaultDimensions());
 
-    schema.appendDimension(dimensions.getDimension("Time"));
-    schema.appendDimension(dimensions.getDimension("Y"));
-    schema.appendDimension(dimensions.getDimension("X"));
+    m_schema.appendDimension(dimensions.getDimension("Time"));
+    m_schema.appendDimension(dimensions.getDimension("Y"));
+    m_schema.appendDimension(dimensions.getDimension("X"));
 
     Dimension z = dimensions.getDimension("Z");
     z.setNumericScale(m_scale_z);
-    schema.appendDimension(z);
+    m_schema.appendDimension(z);
 
-    schema.appendDimension(dimensions.getDimension("StartPulse"));
-    schema.appendDimension(dimensions.getDimension("ReflectedPulse"));
-    schema.appendDimension(dimensions.getDimension("ScanAngleRank"));
-    schema.appendDimension(dimensions.getDimension("Pitch"));
-    schema.appendDimension(dimensions.getDimension("Roll"));
+    m_schema.appendDimension(dimensions.getDimension("StartPulse"));
+    m_schema.appendDimension(dimensions.getDimension("ReflectedPulse"));
+    m_schema.appendDimension(dimensions.getDimension("ScanAngleRank"));
+    m_schema.appendDimension(dimensions.getDimension("Pitch"));
+    m_schema.appendDimension(dimensions.getDimension("Roll"));
 
     if (m_format == QFIT_Format_12)
     {
-        schema.appendDimension(dimensions.getDimension("PDOP"));
-        schema.appendDimension(dimensions.getDimension("PulseWidth"));
-        schema.appendDimension(dimensions.getDimension("GPSTime"));
+        m_schema.appendDimension(dimensions.getDimension("PDOP"));
+        m_schema.appendDimension(dimensions.getDimension("PulseWidth"));
+        m_schema.appendDimension(dimensions.getDimension("GPSTime"));
 
     }
     else if (m_format == QFIT_Format_14)
     {
-        schema.appendDimension(dimensions.getDimension("PassiveSignal"));
-        schema.appendDimension(dimensions.getDimension("PassiveY"));
-        schema.appendDimension(dimensions.getDimension("PassiveX"));
+        m_schema.appendDimension(dimensions.getDimension("PassiveSignal"));
+        m_schema.appendDimension(dimensions.getDimension("PassiveY"));
+        m_schema.appendDimension(dimensions.getDimension("PassiveX"));
         Dimension z = dimensions.getDimension("PassiveZ");
         z.setNumericScale(m_scale_z);
-        schema.appendDimension(z);
-        schema.appendDimension(dimensions.getDimension("GPSTime"));
+        m_schema.appendDimension(z);
+        m_schema.appendDimension(dimensions.getDimension("GPSTime"));
     }
     else
     {
-        schema.appendDimension(dimensions.getDimension("GPSTime"));
+        m_schema.appendDimension(dimensions.getDimension("GPSTime"));
     }
 
     return;
@@ -680,15 +678,19 @@ boost::uint32_t Reader::processBuffer(PointBuffer& data, std::istream& stream, b
     return numPoints;
 }
 
-pdal::StageSequentialIterator* Reader::createSequentialIterator(PointBuffer& buffer) const
+pdal::StageSequentialIterator*
+Reader::createSequentialIterator(PointBuffer& buffer) const
 {
-    return new pdal::drivers::qfit::iterators::sequential::Reader(*this, buffer);
+    return new pdal::drivers::qfit::iterators::sequential::Reader(*this,
+        buffer, getNumPoints());
 }
 
 
-pdal::StageRandomIterator* Reader::createRandomIterator(PointBuffer& buffer) const
+pdal::StageRandomIterator*
+Reader::createRandomIterator(PointBuffer& buffer) const
 {
-    return new pdal::drivers::qfit::iterators::random::Reader(*this, buffer);
+    return new pdal::drivers::qfit::iterators::random::Reader(*this,
+        buffer, getNumPoints());
 }
 
 std::vector<Dimension> Reader::getDefaultDimensions()
@@ -813,21 +815,19 @@ namespace sequential
 {
 
 
-Reader::Reader(const pdal::drivers::qfit::Reader& reader, PointBuffer& buffer)
-    : pdal::ReaderSequentialIterator(reader, buffer)
-    , m_reader(reader)
-    , m_istream(NULL)
+Reader::Reader(const pdal::drivers::qfit::Reader& reader, PointBuffer& buffer,
+        boost::uint32_t numPoints)
+    : pdal::ReaderSequentialIterator(buffer)
+    , m_reader(reader), m_numPoints(numPoints)
 {
     m_istream = FileUtils::openFile(m_reader.getFileName());
     m_istream->seekg(m_reader.getPointDataOffset());
-    return;
 }
 
 
 Reader::~Reader()
 {
     FileUtils::closeFile(m_istream);
-    return;
 }
 
 
@@ -840,13 +840,14 @@ boost::uint64_t Reader::skipImpl(boost::uint64_t count)
 
 bool Reader::atEndImpl() const
 {
-    return getIndex() >= getStage().getNumPoints();
+    return getIndex() >= m_numPoints;
 }
 
 
 boost::uint32_t Reader::readBufferImpl(PointBuffer& data)
 {
-    return m_reader.processBuffer(data, *m_istream, getStage().getNumPoints()-this->getIndex());
+    boost::uint32_t numToRead = m_numPoints - getIndex();
+    return m_reader.processBuffer(data, *m_istream, numToRead);
 }
 
 } // sequential
@@ -855,21 +856,19 @@ namespace random
 {
 
 
-Reader::Reader(const pdal::drivers::qfit::Reader& reader, PointBuffer& buffer)
-    : pdal::ReaderRandomIterator(reader, buffer)
-    , m_reader(reader)
-    , m_istream(NULL)
+Reader::Reader(const pdal::drivers::qfit::Reader& reader, PointBuffer& buffer,
+        boost::uint32_t numPoints)
+    : pdal::ReaderRandomIterator(buffer),
+    m_reader(reader), m_numPoints(numPoints)
 {
     m_istream = FileUtils::openFile(m_reader.getFileName());
     m_istream->seekg(m_reader.getPointDataOffset());
-    return;
 }
 
 
 Reader::~Reader()
 {
     FileUtils::closeFile(m_istream);
-    return;
 }
 
 
@@ -877,9 +876,11 @@ boost::uint64_t Reader::seekImpl(boost::uint64_t count)
 {
 
     if (!m_istream->good())
-        throw pdal_error("QFIT RandomIterator::seekImpl stream is no good before seeking!");
+        throw pdal_error("QFIT RandomIterator::seekImpl stream is no good "
+            "before seeking!");
 
-    m_istream->seekg(m_reader.getPointDataSize() * count + m_reader.getPointDataOffset(), std::ios::beg);
+    m_istream->seekg(m_reader.getPointDataSize() *
+        count + m_reader.getPointDataOffset(), std::ios::beg);
 
     if (m_istream->eof())
         throw pdal_error("Seek past the end of the file!");
@@ -893,10 +894,8 @@ boost::uint64_t Reader::seekImpl(boost::uint64_t count)
 
 boost::uint32_t Reader::readBufferImpl(PointBuffer& data)
 {
-    boost::uint64_t numpoints = getStage().getNumPoints();
-    boost::uint64_t index = this->getIndex();
-
-    return m_reader.processBuffer(data, *m_istream, numpoints-index);
+    boost::uint64_t numToRead = m_numPoints - getIndex();
+    return m_reader.processBuffer(data, *m_istream, numToRead);
 }
 
 

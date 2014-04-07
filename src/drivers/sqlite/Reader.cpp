@@ -107,8 +107,7 @@ void Reader::initialize()
 
     m_session->set_log_stream(&(log()->get(logDEBUG2)));
 
-    Schema& schema = getSchemaRef();
-    schema = fetchSchema(query);
+    m_schema = fetchSchema(query);
 
     try
     {
@@ -533,10 +532,8 @@ boost::uint32_t IteratorBase::myReadBlocks(PointBuffer& user_buffer)
 
 Reader::Reader(const pdal::drivers::sqlite::Reader& reader, PointBuffer& buffer)
     : IteratorBase(reader)
-    , pdal::StageSequentialIterator(reader, buffer)
-{
-    return;
-}
+    , pdal::StageSequentialIterator(buffer)
+{}
 
 
 Reader::~Reader()

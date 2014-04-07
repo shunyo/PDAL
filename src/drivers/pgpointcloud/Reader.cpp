@@ -144,8 +144,7 @@ void Reader::initialize()
     m_session = pg_connect(m_connection);
 
     // Read schema from pointcloud_formats if possible
-    Schema& schema = getSchemaRef();
-    schema = fetchSchema();
+    m_schema = fetchSchema();
 
     // Allow spatialreference override if desired
     try
@@ -359,7 +358,7 @@ namespace sequential
 {
 
 Iterator::Iterator(const pdal::drivers::pgpointcloud::Reader& reader, PointBuffer& buffer)
-    : pdal::StageSequentialIterator(reader, buffer)
+    : pdal::StageSequentialIterator(buffer)
     , m_reader(reader)
     , m_at_end(false)
     , m_buffer(NULL)

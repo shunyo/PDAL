@@ -91,7 +91,6 @@ void Reader::initialize()
 {
     pdal::Reader::initialize();
 
-    Schema& schema = getSchemaRef();
     const LizardTech::PointInfo& pointinfo = m_PS->getPointInfo();
 
     Schema const& dimensions(getDefaultDimensions());
@@ -99,7 +98,7 @@ void Reader::initialize()
     {
         const LizardTech::ChannelInfo &channel = pointinfo.getChannel(i);
         Dimension dim = LTChannelToPDalDimension(channel, dimensions);
-        schema.appendDimension(dim);
+        m_schema.appendDimension(dim);
     }
 
     setNumPoints(m_PS->getNumPoints());
@@ -118,7 +117,7 @@ Options Reader::getDefaultOptions()
 
 pdal::StageSequentialIterator* Reader::createSequentialIterator(PointBuffer& buffer) const
 {
-    return new pdal::drivers::mrsid::iterators::sequential::Reader(*this, buffer);
+    return new pdal::drivers::mrsid::iterators::sequential::Reader(*this, buffer, getNumPoints());
 }
 
 int Reader::SchemaToPointInfo(const Schema &schema, LizardTech::PointInfo &pointInfo) const
@@ -410,8 +409,9 @@ namespace sequential
 {
 
 
-Reader::Reader(const pdal::drivers::mrsid::Reader& reader, PointBuffer& buffer)
-    : pdal::ReaderSequentialIterator(reader, buffer)
+Reader::Reader(const pdal::drivers::mrsid::Reader& reader, PointBuffer& buffer, boost::uint32_t numPoints)
+    : pdal::ReaderSequentialIterator(buffer)
+    , m_numPoints(numPoints)
     , m_reader(reader)
 {
     return;
@@ -426,9 +426,9 @@ boost::uint64_t Reader::skipImpl(boost::uint64_t count)
 
 bool Reader::atEndImpl() const
 {
-    const boost::uint64_t numPoints = getStage().getNumPoints();
+    // const boost::uint64_t numPoints = getStage().getNumPoints();
     const boost::uint64_t currPoint = getIndex();
-    return currPoint >= numPoints;
+    return currPoint >= m_numPoints;
 }
 
 
