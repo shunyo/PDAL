@@ -19,7 +19,8 @@ sudo apt-get install \
     libtiff4-dev \
     libxml2-dev \
     python-numpy \
-    boost1.55
+    boost1.54 \
+    clang3.3
 
 # install libgeotiff from sources
 wget http://download.osgeo.org/geotiff/libgeotiff/libgeotiff-1.4.0.tar.gz
