@@ -149,6 +149,13 @@ void PDALtoPCD(const PointBuffer& data, CloudT &cloud)
     const pdal::Dimension &dZ = buffer_schema.getDimension("Z");
     if (pcl::traits::has_xyz<typename CloudT::PointType>::value)
     {
+      std::cerr << std::setprecision(4);
+      std::cerr << std::fixed;
+      std::cerr << data.getFieldAs<float>(dX, 0, true) << std::endl;
+      std::cerr << data.getFieldAs<float>(dX, 0, false) << std::endl;
+      std::cerr << data.getFieldAs<float>(dX, 0, false)*dX.getNumericScale() << std::endl;
+      std::cerr << data.getFieldAs<float>(dX, 0, false)*dX.getNumericScale()+dX.getNumericOffset() << std::endl;
+      std::cerr << data.getFieldAs<int32_t>(dX, 0, false)*dX.getNumericScale()+dX.getNumericOffset() << std::endl;
         for (boost::uint32_t i = 0; i < cloud.points.size(); ++i)
         {
             typename CloudT::PointType p = cloud.points[i];

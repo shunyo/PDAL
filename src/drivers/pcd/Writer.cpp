@@ -114,7 +114,7 @@ boost::uint32_t Writer::writeBuffer(const PointBuffer& data)
     pdal::PDALtoPCD(data, *cloud);
 
     pcl::PCDWriter w;
-
+    std::cerr << cloud->points[0].x << std::endl;
     if (m_compressed)
         w.writeBinaryCompressed<XYZIRGBA>(m_filename, *cloud);
     else
