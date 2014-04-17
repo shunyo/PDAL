@@ -132,7 +132,7 @@ void PCDtoPDAL(CloudT &cloud, PointBuffer& data)
  * Converts PDAL data to PCD format.
  */
 template <typename CloudT>
-void PDALtoPCD(const PointBuffer& data, CloudT &cloud)
+void PDALtoPCD(const PointBuffer& data, CloudT &cloud, bool scaled=false)
 {
     typedef typename pcl::traits::fieldList<typename CloudT::PointType>::type FieldList;
 
@@ -149,6 +149,7 @@ void PDALtoPCD(const PointBuffer& data, CloudT &cloud)
     const pdal::Dimension &dZ = buffer_schema.getDimension("Z");
     if (pcl::traits::has_xyz<typename CloudT::PointType>::value)
     {
+      /*
       std::cerr << std::setprecision(4);
       std::cerr << std::fixed;
       std::cerr << data.getFieldAs<float>(dX, 0, true) << std::endl;
@@ -156,13 +157,28 @@ void PDALtoPCD(const PointBuffer& data, CloudT &cloud)
       std::cerr << data.getFieldAs<float>(dX, 0, false)*dX.getNumericScale() << std::endl;
       std::cerr << data.getFieldAs<float>(dX, 0, false)*dX.getNumericScale()+dX.getNumericOffset() << std::endl;
       std::cerr << data.getFieldAs<int32_t>(dX, 0, false)*dX.getNumericScale()+dX.getNumericOffset() << std::endl;
-        for (boost::uint32_t i = 0; i < cloud.points.size(); ++i)
+      */
+        if (scaled)
         {
-            typename CloudT::PointType p = cloud.points[i];
-            p.x = data.getFieldAs<float>(dX, i);
-            p.y = data.getFieldAs<float>(dY, i);
-            p.z = data.getFieldAs<float>(dZ, i);
-            cloud.points[i] = p;
+            for (boost::uint32_t i = 0; i < cloud.points.size(); ++i)
+            {
+                typename CloudT::PointType p = cloud.points[i];
+                p.x = data.getFieldAs<float>(dX, i) * dX.getNumericScale();
+                p.y = data.getFieldAs<float>(dY, i) * dY.getNumericScale();
+                p.z = data.getFieldAs<float>(dZ, i) * dZ.getNumericScale();
+                cloud.points[i] = p;
+            }
+        }
+        else
+        {
+            for (boost::uint32_t i = 0; i < cloud.points.size(); ++i)
+            {
+                typename CloudT::PointType p = cloud.points[i];
+                p.x = data.getFieldAs<float>(dX, i);
+                p.y = data.getFieldAs<float>(dY, i);
+                p.z = data.getFieldAs<float>(dZ, i);
+                cloud.points[i] = p;
+            }
         }
     }
 

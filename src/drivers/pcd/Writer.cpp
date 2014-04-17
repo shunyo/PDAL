@@ -111,7 +111,7 @@ void Writer::writeEnd(boost::uint64_t /*actualNumPointsWritten*/)
 boost::uint32_t Writer::writeBuffer(const PointBuffer& data)
 {
     pcl::PointCloud<XYZIRGBA>::Ptr cloud(new pcl::PointCloud<XYZIRGBA>);
-    pdal::PDALtoPCD(data, *cloud);
+    pdal::PDALtoPCD(data, *cloud, false);
 
     pcl::PCDWriter w;
     std::cerr << cloud->points[0].x << std::endl;
