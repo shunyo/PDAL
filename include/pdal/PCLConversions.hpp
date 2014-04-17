@@ -65,7 +65,7 @@ namespace pdal
  * Converts PCD data to PDAL format.
  */
 template <typename CloudT>
-void PCDtoPDAL(CloudT &cloud, PointBuffer& data)
+void PCDtoPDAL(CloudT &cloud, PointBuffer& data, bool scaled=false)
 {
     typedef typename pcl::traits::fieldList<typename CloudT::PointType>::type FieldList;
 
@@ -78,12 +78,25 @@ void PCDtoPDAL(CloudT &cloud, PointBuffer& data)
     const pdal::Dimension &dZ = buffer_schema.getDimension("Z");
     if (pcl::traits::has_xyz<typename CloudT::PointType>::value)
     {
-        for (boost::uint32_t i = 0; i < cloud.points.size(); ++i)
+        if (scaled)
         {
-            typename CloudT::PointType p = cloud.points[i];
-            data.setField<float>(dX, i, p.x);
-            data.setField<float>(dY, i, p.y);
-            data.setField<float>(dZ, i, p.z);
+            for (boost::uint32_t i = 0; i < cloud.points.size(); ++i)
+            {
+                typename CloudT::PointType p = cloud.points[i];
+                data.setField<float>(dX, i, p.x);
+                data.setField<float>(dY, i, p.y);
+                data.setField<float>(dZ, i, p.z);
+            }
+        }
+        else
+        {
+            for (boost::uint32_t i = 0; i < cloud.points.size(); ++i)
+            {
+                typename CloudT::PointType p = cloud.points[i];
+                data.setField<float>(dX, i, p.x / dX.getNumericScale());
+                data.setField<float>(dY, i, p.y / dY.getNumericScale());
+                data.setField<float>(dZ, i, p.z / dZ.getNumericScale());
+            }
         }
     }
 
@@ -163,9 +176,9 @@ void PDALtoPCD(const PointBuffer& data, CloudT &cloud, bool scaled=false)
             for (boost::uint32_t i = 0; i < cloud.points.size(); ++i)
             {
                 typename CloudT::PointType p = cloud.points[i];
-                p.x = data.getFieldAs<float>(dX, i) * dX.getNumericScale();
-                p.y = data.getFieldAs<float>(dY, i) * dY.getNumericScale();
-                p.z = data.getFieldAs<float>(dZ, i) * dZ.getNumericScale();
+                p.x = data.getFieldAs<float>(dX, i);
+                p.y = data.getFieldAs<float>(dY, i);
+                p.z = data.getFieldAs<float>(dZ, i);
                 cloud.points[i] = p;
             }
         }
@@ -174,9 +187,9 @@ void PDALtoPCD(const PointBuffer& data, CloudT &cloud, bool scaled=false)
             for (boost::uint32_t i = 0; i < cloud.points.size(); ++i)
             {
                 typename CloudT::PointType p = cloud.points[i];
-                p.x = data.getFieldAs<float>(dX, i);
-                p.y = data.getFieldAs<float>(dY, i);
-                p.z = data.getFieldAs<float>(dZ, i);
+                p.x = data.getFieldAs<float>(dX, i, false) * dX.getNumericScale();
+                p.y = data.getFieldAs<float>(dY, i, false) * dY.getNumericScale();
+                p.z = data.getFieldAs<float>(dZ, i, false) * dZ.getNumericScale();
                 cloud.points[i] = p;
             }
         }
