@@ -117,8 +117,8 @@ private:
 
 enum Orientation
 {
-    POINT_INTERLEAVED = 1,
-    DIMENSION_INTERLEAVED = 2,
+    POINT_MAJOR = 1,
+    DIMENSION_MAJOR = 2,
     UNKNOWN_INTERLEAVED = 256
 };    
 

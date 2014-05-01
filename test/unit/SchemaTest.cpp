@@ -142,19 +142,6 @@ BOOST_AUTO_TEST_CASE(test_find)
 }
 
 
-BOOST_AUTO_TEST_CASE(SchemaTest_orientation)
-{
-
-    Dimension x("X", dimension::SignedInteger, 4);
-    Dimension y("Y", dimension::SignedInteger, 4);
-    Schema s;
-    s.appendDimension(x);
-    s.appendDimension(y);
-    
-    BOOST_CHECK_EQUAL(s.getOrientation(), pdal::schema::POINT_INTERLEAVED);
-}
-
-
 BOOST_AUTO_TEST_CASE(SchemaTest_pack)
 {
 

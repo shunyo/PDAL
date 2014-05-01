@@ -64,6 +64,8 @@ namespace drivers
 namespace oci
 {
 
+
+
 typedef boost::shared_ptr<OWConnection> Connection ;
 typedef boost::shared_ptr<OWStatement> Statement ;
 

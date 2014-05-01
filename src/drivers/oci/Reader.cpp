@@ -138,7 +138,7 @@ void Reader::initialize()
         }
 
         m_schema = fetchSchema(m_initialQueryStatement, m_block->pc, m_capacity);
-        m_schema.setOrientation(schema::POINT_INTERLEAVED);
+        m_schema.setOrientation(schema::POINT_MAJOR);
 
         bool bNormalizeXYZ = getOptions().getValueOrDefault<bool>("do_normalize_xyz", true);
         if (bNormalizeXYZ)
@@ -550,7 +550,7 @@ IteratorBase::IteratorBase(const pdal::drivers::oci::Reader& reader)
     , m_active_cloud_id(0)
     , m_oracle_buffer(BufferPtr())
     , m_buffer_position(0)
-    , m_orientation(schema::POINT_INTERLEAVED)
+    , m_orientation(schema::POINT_MAJOR)
     , m_reader(reader)
 {
 
@@ -644,7 +644,7 @@ void IteratorBase::readBlob(Statement statement,
         m_oracle_buffer->resize(capacity, true);
     }
 
-    if (m_oracle_buffer->getSchema().getOrientation() == schema::DIMENSION_INTERLEAVED)
+    if (m_oracle_buffer->getSchema().getOrientation() == schema::DIMENSION_MAJOR)
     {
         boost::uint32_t capacity = nBlobLength/m_oracle_buffer->getSchema().getByteSize();
         assert(nBlobLength % m_oracle_buffer->getSchema().getByteSize() == 0);

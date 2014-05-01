@@ -175,7 +175,7 @@ BOOST_AUTO_TEST_CASE(test_schema_orientation)
     schema.appendDimension(x);
     schema.appendDimension(y);
     schema.appendDimension(cls);
-    schema.setOrientation(schema::DIMENSION_INTERLEAVED);
+    schema.setOrientation(schema::DIMENSION_MAJOR);
   
     
     pdal::schema::Writer writer(schema);

@@ -494,9 +494,9 @@ void Reader::Load()
             xmlFree(n);
             
             if (boost::iequals(orientation, "dimension"))
-                m_schema.setOrientation(schema::DIMENSION_INTERLEAVED);
+                m_schema.setOrientation(schema::DIMENSION_MAJOR);
             else
-                m_schema.setOrientation(schema::POINT_INTERLEAVED);
+                m_schema.setOrientation(schema::POINT_MAJOR);
             
             dimension = dimension->next;
             continue;
@@ -784,9 +784,9 @@ void Writer::write(TextWriterPtr writer)
     }
     
     std::ostringstream orientation;
-    if (m_schema.getOrientation() == schema::POINT_INTERLEAVED)
+    if (m_schema.getOrientation() == schema::POINT_MAJOR)
         orientation << "point";
-    if (m_schema.getOrientation() == schema::DIMENSION_INTERLEAVED)
+    if (m_schema.getOrientation() == schema::DIMENSION_MAJOR)
         orientation << "dimension";
     xmlTextWriterWriteElementNS(w, (const xmlChar*) "pc", (const xmlChar*) "orientation", NULL, (const xmlChar*) orientation.str().c_str());
     

@@ -77,7 +77,7 @@ Writer::Writer(Stage& prevStage, const Options& options)
     , m_sdo_pc_is_initialized(false)
     , m_chunkCount(16)
     , m_streamChunks(false)
-    , m_orientation(schema::POINT_INTERLEAVED)
+    , m_orientation(schema::POINT_MAJOR)
 {
 
     m_connection = connect();
@@ -103,7 +103,7 @@ Writer::Writer(Stage& prevStage, const Options& options)
 
     bool bFlipDimensional = getOptions().getValueOrDefault<bool>("store_dimensional_orientation", false);
     if (bFlipDimensional)
-        m_orientation = schema::DIMENSION_INTERLEAVED;
+        m_orientation = schema::DIMENSION_MAJOR;
     
 }
 
@@ -241,7 +241,7 @@ Options Writer::getDefaultOptions()
     Option do_trace("do_trace", false, "turn on server-side binds/waits tracing -- needs ALTER SESSION privs");
     Option stream_chunks("stream_chunks", false, "Stream block data chunk-wise by the DB's chunk size rather than as an entire blob");
     Option blob_chunk_count("blob_chunk_count", 16, "When streaming, the number of chunks per write to use");
-    Option store_dimensional_orientation("store_dimensional_orientation", false, "Store the points oriented in DIMENSION_INTERLEAVED instead of POINT_INTERLEAVED orientation");
+    Option store_dimensional_orientation("store_dimensional_orientation", false, "Store the points oriented in DIMENSION_MAJOR instead of POINT_MAJOR orientation");
     options.add(is3d);
     options.add(solid);
     options.add(overwrite);
@@ -815,7 +815,7 @@ void Writer::CreatePCEntry(Schema const& buffer_schema)
         log()->get(logDEBUG3) << "Packing ignored dimension from PointBuffer " << std::endl;
         
         pdal::Schema clean_schema = buffer_schema.pack();
-        clean_schema.setOrientation(m_orientation);
+        // clean_schema.setOrientation(m_orientation);
         schema_data = pdal::Schema::to_xml(clean_schema);
         dimensions = clean_schema.size();
 
@@ -823,7 +823,7 @@ void Writer::CreatePCEntry(Schema const& buffer_schema)
     else
     {
         pdal::Schema oriented_schema(buffer_schema);
-        oriented_schema.setOrientation(m_orientation);
+        // oriented_schema.setOrientation(m_orientation);
         schema_data = pdal::Schema::to_xml(oriented_schema);
         dimensions  = buffer_schema.size();
     }
@@ -1185,47 +1185,47 @@ bool Writer::WriteBlock(PointBuffer const& buffer)
     PointBuffer* output_buffer(0);
     
     bool pack = getOptions().getValueOrDefault<bool>("pack_ignored_fields", true);
-    if (pack)
-    {
-        log()->get(logDEBUG4) << "packing out ignored fields" << std::endl;
-        output_buffer = buffer.pack();
-        assert (output_buffer->getCapacity() == buffer.getNumPoints());
-
-        // The requested orientation is m_orientation, and it does not match 
-        // the orientation of the output_buffer. Flip it.
-        if (m_orientation != output_buffer->getSchema().getOrientation())
-        {
-            PointBuffer* flipped = output_buffer->flipOrientation();
-            delete output_buffer;
-            output_buffer = flipped;
-        }
-        point_data = output_buffer->getData(0);
-        
-        if (m_orientation == schema::DIMENSION_INTERLEAVED)
-            point_data_length = output_buffer->getSchema().getByteSize() * output_buffer->getCapacity();
-        else
-            point_data_length = output_buffer->getSchema().getByteSize() * output_buffer->getNumPoints();
-    }
-    else
-    {
-        if (m_orientation != buffer.getSchema().getOrientation())
-        {
-            output_buffer = buffer.flipOrientation();
-            point_data = output_buffer->getData(0);
-            if (m_orientation == schema::DIMENSION_INTERLEAVED)
-                point_data_length = output_buffer->getSchema().getByteSize() * output_buffer->getCapacity();
-            else
-                point_data_length = output_buffer->getSchema().getByteSize() * output_buffer->getNumPoints();
-        }
-        else
-        {
-            point_data = buffer.getData(0);
-            if (m_orientation == schema::DIMENSION_INTERLEAVED)
-                point_data_length = buffer.getSchema().getByteSize() * buffer.getCapacity();
-            else
-                point_data_length = buffer.getSchema().getByteSize() * buffer.getNumPoints();
-        }
-    }
+    // if (pack)
+  //   {
+  //       log()->get(logDEBUG4) << "packing out ignored fields" << std::endl;
+  //       output_buffer = buffer.pack();
+  //       assert (output_buffer->getCapacity() == buffer.getNumPoints());
+  // 
+  //       // The requested orientation is m_orientation, and it does not match 
+  //       // the orientation of the output_buffer. Flip it.
+  //       // if (m_orientation != output_buffer->getSchema().getOrientation())
+  //       // {
+  //       //     PointBuffer* flipped = output_buffer->flipOrientation();
+  //       //     delete output_buffer;
+  //       //     output_buffer = flipped;
+  //       // }
+  //       point_data = output_buffer->getData(0);
+  //       
+  //       if (m_orientation == pdal::drivers::oci::DIMENSION_MAJOR)
+  //           point_data_length = output_buffer->getSchema().getByteSize() * output_buffer->getCapacity();
+  //       else
+  //           point_data_length = output_buffer->getSchema().getByteSize() * output_buffer->getNumPoints();
+  //   }
+  //   else
+  //   {
+  //       if (m_orientation != buffer.getSchema().getOrientation())
+  //       {
+  //           output_buffer = buffer.flipOrientation();
+  //           point_data = output_buffer->getData(0);
+  //           if (m_orientation == pdal::drivers::oci::DIMENSION_MAJOR)
+  //               point_data_length = output_buffer->getSchema().getByteSize() * output_buffer->getCapacity();
+  //           else
+  //               point_data_length = output_buffer->getSchema().getByteSize() * output_buffer->getNumPoints();
+  //       }
+  //       else
+  //       {
+  //           point_data = buffer.getData(0);
+  //           if (m_orientation == pdal::drivers::oci::DIMENSION_MAJOR)
+  //               point_data_length = buffer.getSchema().getByteSize() * buffer.getCapacity();
+  //           else
+  //               point_data_length = buffer.getSchema().getByteSize() * buffer.getNumPoints();
+  //       }
+  //   }
     
     log()->get(logDEBUG4) << "Writing blob of size " << point_data_length << std::endl;
     OCILobLocator* locator;

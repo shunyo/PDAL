@@ -70,16 +70,7 @@ namespace pdal
 /// described in the pdal::Schema. You can operate on the raw bytes if you need
 /// to, but PointBuffer provides a number of convienence methods to make things
 /// easier. 
-/*! 
-    \verbatim embed:rst
-    .. note::
-
-        The arrangement of PointBuffer's bytes might either be
-        point-interleaved or dimension-interleaved, with point-interleave being
-        the default organization.  If you are directly modifying a PointBuffer's
-        bytes, you must respect the :cpp:class:`pdal::pointbuffer::Orientation`. 
-    \endverbatim
-*/    
+  
 class PDAL_DLL PointBuffer
 {
 public:
@@ -239,10 +230,6 @@ public:
         if (!getBufferByteLength() || !srcPointBuffer.getBufferByteLength())
             return;
 
-        assert (srcPointBuffer.getSchema().getOrientation() ==
-            getSchema().getOrientation() &&
-            getSchema().getOrientation() != schema::DIMENSION_INTERLEAVED);
-
         const boost::uint8_t* src = srcPointBuffer.getData(srcPointIndex);
         boost::uint8_t* dest = getData(destPointIndex);
         
@@ -274,9 +261,6 @@ public:
                                const PointBuffer& srcPointBuffer,
                                boost::uint32_t numPoints)
     {
-        assert (srcPointBuffer.getSchema().getOrientation() ==
-            getSchema().getOrientation() &&
-            getSchema().getOrientation() != schema::DIMENSION_INTERLEAVED);
         const boost::uint8_t* src = srcPointBuffer.getData(srcPointIndex);
         boost::uint8_t* dest = getData(destPointIndex);
 
@@ -296,20 +280,18 @@ public:
             return NULL;
 
         pointbuffer::PointBufferByteSize position(0);
-        if (m_orientation == schema::POINT_INTERLEAVED)
-        {
-            position =
+        position =
                 static_cast<pointbuffer::PointBufferByteSize>(m_byteSize) *
                 static_cast<pointbuffer::PointBufferByteSize>(pointIndex);
-        }
-        else if (m_orientation == schema::DIMENSION_INTERLEAVED)
-        {
-            pointbuffer::PointBufferByteSize offset(0);
-            offset = m_schema.getDimension(pointIndex).getByteOffset();
-            position =
-                static_cast<pointbuffer::PointBufferByteSize>(m_capacity) *
-                offset;
-        }
+        // }
+        // else if (m_orientation == schema::DIMENSION_INTERLEAVED)
+        // {
+        //     pointbuffer::PointBufferByteSize offset(0);
+        //     offset = m_schema.getDimension(pointIndex).getByteOffset();
+        //     position =
+        //         static_cast<pointbuffer::PointBufferByteSize>(m_capacity) *
+        //         offset;
+        // }
         return const_cast<boost::uint8_t*>(m_data.get()) + position;
     }
     
@@ -367,7 +349,7 @@ public:
     virtual PointBuffer* pack(bool bRemoveIgnoredDimensions = true) const;
     
     /// @return a new PointBuffer with the opposite orientation
-    virtual PointBuffer* flipOrientation() const;
+    // virtual PointBuffer* flipOrientation() const;
     
     /** @name Serialization
     */
@@ -447,10 +429,6 @@ protected:
     // being dereferenced for every point read otherwise.
     schema::size_type m_byteSize;
     
-    // We cache m_schema.getOrientation() here because it would end 
-    // up being dereferenced for every point read
-    schema::Orientation m_orientation;
-
     Metadata m_metadata;
     pointbuffer::id m_uuid;
     
@@ -479,27 +457,21 @@ inline void PointBuffer::setField(pdal::Dimension const& dim,
     pointbuffer::PointBufferByteSize point_start_byte_position(0); 
     pointbuffer::PointBufferByteSize offset(0);
     
-    if (m_orientation == schema::POINT_INTERLEAVED)
-    {
-        point_start_byte_position =
-            static_cast<pointbuffer::PointBufferByteSize>(pointIndex) * \
-            static_cast<pointbuffer::PointBufferByteSize>(m_byteSize); 
-        offset = point_start_byte_position + \
-            static_cast<pointbuffer::PointBufferByteSize>(dim.getByteOffset());
-    } 
-    else if (m_orientation == schema::DIMENSION_INTERLEAVED)
-    {
-        point_start_byte_position =
-            static_cast<pointbuffer::PointBufferByteSize>(m_capacity) *
-            static_cast<pointbuffer::PointBufferByteSize>(dim.getByteOffset());
-        offset = point_start_byte_position +
-            static_cast<pointbuffer::PointBufferByteSize>(dim.getByteSize()) *
-            static_cast<pointbuffer::PointBufferByteSize>(pointIndex);
-    }
-    else
-    {
-        throw buffer_error("unknown pdal::Schema::m_orientation provided!");
-    }
+    point_start_byte_position =
+        static_cast<pointbuffer::PointBufferByteSize>(pointIndex) * \
+        static_cast<pointbuffer::PointBufferByteSize>(m_byteSize); 
+    offset = point_start_byte_position + \
+        static_cast<pointbuffer::PointBufferByteSize>(dim.getByteOffset());
+
+    // else if (m_orientation == schema::DIMENSION_INTERLEAVED)
+    // {
+    //     point_start_byte_position =
+    //         static_cast<pointbuffer::PointBufferByteSize>(m_capacity) *
+    //         static_cast<pointbuffer::PointBufferByteSize>(dim.getByteOffset());
+    //     offset = point_start_byte_position +
+    //         static_cast<pointbuffer::PointBufferByteSize>(dim.getByteSize()) *
+    //         static_cast<pointbuffer::PointBufferByteSize>(pointIndex);
+    // }
 
     assert(offset + sizeof(T) <= getBufferByteLength());
 
@@ -539,27 +511,20 @@ inline T PointBuffer::getField(pdal::Dimension const& dim,
     pointbuffer::PointBufferByteSize point_start_byte_position(0); 
     pointbuffer::PointBufferByteSize offset(0);
     
-    if (m_orientation == schema::POINT_INTERLEAVED)
-    {
-        point_start_byte_position =
-            static_cast<pointbuffer::PointBufferByteSize>(pointIndex) *
-            static_cast<pointbuffer::PointBufferByteSize>(m_byteSize); 
-        offset = point_start_byte_position +
-            static_cast<pointbuffer::PointBufferByteSize>(dim.getByteOffset());
-    }
-    else if (m_orientation == schema::DIMENSION_INTERLEAVED)
-    {
-        point_start_byte_position =
-            static_cast<pointbuffer::PointBufferByteSize>(m_capacity) *
-            static_cast<pointbuffer::PointBufferByteSize>(dim.getByteOffset());
-        offset = point_start_byte_position +
-            static_cast<pointbuffer::PointBufferByteSize>(dim.getByteSize()) *
-            static_cast<pointbuffer::PointBufferByteSize>(pointIndex);
-    }
-    else
-    {
-        throw buffer_error("unknown pdal::Schema::m_orientation provided!");
-    }
+    point_start_byte_position =
+        static_cast<pointbuffer::PointBufferByteSize>(pointIndex) *
+        static_cast<pointbuffer::PointBufferByteSize>(m_byteSize); 
+    offset = point_start_byte_position +
+        static_cast<pointbuffer::PointBufferByteSize>(dim.getByteOffset());
+    //     else if (m_orientation == schema::DIMENSION_INTERLEAVED)
+    // {
+    //     point_start_byte_position =
+    //         static_cast<pointbuffer::PointBufferByteSize>(m_capacity) *
+    //         static_cast<pointbuffer::PointBufferByteSize>(dim.getByteOffset());
+    //     offset = point_start_byte_position +
+    //         static_cast<pointbuffer::PointBufferByteSize>(dim.getByteSize()) *
+    //         static_cast<pointbuffer::PointBufferByteSize>(pointIndex);
+    // }
 
     assert(offset + sizeof(T) <= getBufferByteLength());
 

@@ -62,14 +62,14 @@ namespace pdal
 
 Schema::Schema()
     : m_byteSize(0)
-    , m_orientation(schema::POINT_INTERLEAVED)
+    , m_orientation(schema::POINT_MAJOR)
 {
     return;
 }
 
 Schema::Schema(std::vector<Dimension> const& dimensions)
     : m_byteSize(0)
-    , m_orientation(schema::POINT_INTERLEAVED)
+    , m_orientation(schema::POINT_MAJOR)
 {
 
     for (std::vector<Dimension>::const_iterator i = dimensions.begin();
@@ -605,7 +605,7 @@ std::ostream& Schema::toRST(std::ostream& os) const
     std::string orientation("point");
     std::string size = boost::lexical_cast<std::string>(dimensions.size());
     
-    if (getOrientation() == schema::DIMENSION_INTERLEAVED)
+    if (getOrientation() == schema::DIMENSION_MAJOR)
         orientation = "dimension";
     
     os << orientation << "-oriented schema has " << size 

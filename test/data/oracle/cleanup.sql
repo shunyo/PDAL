@@ -15,7 +15,7 @@ FOR i IN (SELECT table_name FROM user_tables WHERE table_name = clouds) LOOP
 END LOOP;
 
 FOR i IN (SELECT table_name FROM user_tables WHERE table_name = blks) LOOP
-    EXECUTE IMMEDIATE 'delete from ' || blks;
+   -- EXECUTE IMMEDIATE 'delete from ' || blks;
     EXECUTE IMMEDIATE 'DROP TABLE ' || blks || ' PURGE';
 END LOOP;
 
